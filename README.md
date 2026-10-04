@@ -18,6 +18,8 @@ The model produced 196 true negatives and 35 true positives out of 43 real attac
 
 The feature importance analysis showed that `num_connections` was the strongest attack indicator (49.8%), followed by `packet_size` (31.6%) and `duration` (18.6%). This suggests that monitoring connection rate is more effective than packet inspection alone.
 
+The precision-recall curve (AP=0.95) shows the model maintains perfect precision up to 75% recall. To achieve higher attack recall, the detection threshold can be lowered at the cost of increased false positives — a tradeoff security engineers can tune based on operational requirements.
+
 Overall, while the model correctly identified 81% of attacks, these results highlight that a single model is not sufficient for a fully secure network — additional filtering layers would be needed in a production environment.
 
 ## How To Run

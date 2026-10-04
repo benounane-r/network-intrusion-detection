@@ -2,6 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split 
+from sklearn.metrics import PrecisionRecallDisplay
 
 # load data 
 df = pd.read_csv("network_traffic.csv")
@@ -27,3 +28,16 @@ plt.savefig("feature_importance.png")
 plt.show()
 
 print("Chart saved as feature_importance.png")
+
+
+fig, ax = plt.subplots(figsize=(8, 5))
+PrecisionRecallDisplay.from_estimator(
+    model, X_test, y_test,
+    pos_label="attack",
+    ax=ax
+)
+ax.set_title("Precision-Recall Curve — Attack Detection")
+plt.tight_layout()
+plt.savefig("precision_recall_curve.png")
+plt.show()
+print("Precision-recall curve saved.")
