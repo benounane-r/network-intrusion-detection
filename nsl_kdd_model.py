@@ -112,3 +112,8 @@ print("-"*55)
 print(f"{'Accuracy':<20} {accuracy_score(y_test, rf_preds):<20.4f} {accuracy_score(y_test, xgb_preds_labels):.4f}")
 print(f"{'Attack Recall':<20} {recall_score(y_test, rf_preds, pos_label='attack'):<20.4f} {recall_score(y_test, xgb_preds_labels, pos_label='attack'):.4f}")
 print(f"{'Macro F1':<20} {f1_score(y_test, rf_preds, average='macro'):<20.4f} {f1_score(y_test, xgb_preds_labels, average='macro'):.4f}")
+
+#check for duplicates
+print("\n\n\n\n\n\n\n")
+print("Train duplicates:", train_df.duplicated().sum())
+print("Test duplicates:", test_df.duplicated().sum())
