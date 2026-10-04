@@ -22,6 +22,9 @@ The precision-recall curve (AP=0.95) shows the model maintains perfect precision
 
 Overall, while the model correctly identified 81% of attacks, these results highlight that a single model is not sufficient for a fully secure network — additional filtering layers would be needed in a production environment.
 
+When evaluated on the NSL-KDD benchmark dataset (125,973 
+training samples, 22,544 test samples), XGBoost outperformed Random Forest across all metrics — 80% vs 77% accuracy and 0.67 vs 0.61 attack recall. The performance drop compared to simulated data (95% accuracy) demonstrates the challenge of real-world network traffic classification, where attack patterns overlap with legitimate traffic and the test distribution differs from training (56.9% vs 46.5% attack ratio — distribution shift)
+
 ## How To Run
 
 1. Run `python generate_data.py` to generate the dataset

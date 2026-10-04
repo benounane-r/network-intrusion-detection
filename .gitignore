@@ -3,3 +3,7 @@ __pycache__/
 *.pyc
 network_traffic.csv
 *.png
+*.txt
+*.arff
+*.jpg
+nsl-kdd/
