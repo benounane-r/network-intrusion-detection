@@ -7,3 +7,5 @@ network_traffic.csv
 *.arff
 *.jpg
 nsl-kdd/
+KDDTrain+.txt
+KDDTest+.txt

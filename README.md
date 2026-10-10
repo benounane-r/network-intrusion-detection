@@ -1,80 +1,86 @@
-# Network Intrusion Detection
+# Network Intrusion Detection (NSL-KDD)
 
-A demonstration of ML-based anomaly detection in network traffic — from simulated baselines to real-world benchmark evaluation.
+Binary intrusion detection (normal vs attack) on the NSL-KDD benchmark, comparing a majority baseline, logistic regression, Random Forest and XGBoost. The focus is honest evaluation: what the models catch, and what they miss.
 
-## What This Project Does
+## Key finding
 
-- `generate_data.py` — generates a simulated dataset of attack and normal network traffic
-- `train_model.py` — trains a Random Forest classifier with stratified split and evaluates with full metrics
-- `visualise.py` — generates feature importance chart and precision-recall curve
-- `compare_models.py` — compares Random Forest vs XGBoost on simulated data
-- `nsl_kdd_model.py` — trains and compares both models on the real NSL-KDD benchmark dataset
+All models are precise (about 0.97 attack precision for the tree models) but miss a large share of attacks. The gap comes mainly from **attack types that never appear in training**: on KDDTest+, Random Forest catches 77% of attacks it has seen before but only 29% of unseen ones (XGBoost: 77% vs 43%). Overall attack recall of 0.62-0.67 is a direct result of that.
 
-## How It Works
+## Data and evaluation
 
-The model is trained on network traffic data containing both attack and normal connections. It uses the Random Forest algorithm — an ensemble of 100 decision trees that vote together to classify each connection. A stratified split ensures the attack/normal ratio is preserved across train and test sets. The model produces a confusion matrix, feature importance analysis, and precision-recall curve.
-
-## Data and Evaluation
-
-**Simulated dataset:**
-- 1,000 normal + 200 attack connections
-- Stratified 80/20 train/test split
-- No duplicate rows, no leakage — encoding applied after splitting
-- No feature scaling applied — tree-based models are scale-invariant
-
-**NSL-KDD benchmark dataset:**
-
-| | Train | Test |
+| | Train (KDDTrain+) | Test (KDDTest+) |
 |---|---|---|
 | Rows | 125,973 | 22,544 |
 | Normal | 53.5% | 43.1% |
 | Attack | 46.5% | 56.9% |
+| Attack types | 22 | 37 |
 
-The dataset originally contained 23 attack types. Some classes were severely underrepresented — the spy class had only 2 examples — making multi-class classification unreliable. A binary approach (normal vs attack) was used instead.
+- **Binary task.** The original labels have 22 attack types in train, and some are extremely rare (`spy` has 2 examples), so multi-class classification would be unreliable. Every attack type is grouped into one "attack" class (the positive class).
+- **Unseen attack types.** 17 attack types appear only in the test file: 3,750 rows, which is 16.6% of the test set and 29.2% of all test attacks. KDDTest+ therefore measures generalization to novel attacks, not just performance on known ones. (The split is predefined by the benchmark; it is not time-ordered.)
+- **Preprocessing.** The `difficulty` column is dropped (it is not a network feature). `protocol_type`, `service` and `flag` are one-hot encoded with the encoder fit on the training data only; unknown categories in test would be ignored (none occurred). Numeric features are unscaled for the tree models and standardized for logistic regression.
+- **No tuning.** All models use default hyperparameters, so KDDTest+ was used only for the final evaluation. No train/test duplicates within either file.
+- **Metrics.** Attack precision, recall and F1, macro F1 and PR-AUC, with accuracy as a secondary number. A missed attack (false negative) is the costlier error, so attack recall is the headline metric, balanced against precision so analysts are not flooded with false alarms.
 
-Data was split by file — `KDDTrain+.txt` and `KDDTest+.txt` are predefined splits in the benchmark. This simulates real deployment where training happens on historical data and testing on future data.
+## Results on KDDTest+
 
-No duplicate rows were found in either the train or test set. Encoding was applied separately to train and test sets — no leakage.
+Random Forest and XGBoost: mean ± std over 5 seeds. XGBoost with default settings is deterministic, so its std is 0.
 
-## Key Results
+| Model | Accuracy | Attack precision | Attack recall | Attack F1 | Macro F1 | PR-AUC |
+|---|---|---|---|---|---|---|
+| Majority baseline | 0.431 | 0.000 | 0.000 | 0.000 | 0.301 | 0.569 |
+| Logistic regression | 0.754 | 0.918 | 0.625 | 0.743 | 0.754 | 0.866 |
+| Random Forest | 0.772 ± 0.007 | 0.968 ± 0.001 | 0.619 ± 0.013 | 0.755 ± 0.010 | 0.771 ± 0.008 | 0.961 ± 0.002 |
+| XGBoost | 0.802 ± 0.000 | 0.969 ± 0.000 | 0.673 ± 0.000 | 0.795 ± 0.000 | 0.802 ± 0.000 | 0.965 ± 0.000 |
 
-**Simulated data — Random Forest (stratified split):**
+**Attack recall by whether the attack type was seen in training**
 
-| Metric | Value |
-|---|---|
-| Accuracy | 0.95 |
-| Attack Recall | 0.75 |
-| Precision-Recall AP | 0.95 |
-
-The feature importance analysis showed that `num_connections` was the strongest attack indicator (49.8%), followed by `packet_size` (31.6%) and `duration` (18.6%). This suggests that monitoring connection rate is more effective than packet size or duration alone.
-
-The precision-recall curve (AP=0.95) shows the model maintains perfect precision up to 75% recall. Beyond that, catching more attacks requires accepting more false alarms — a threshold security engineers can tune based on operational requirements.
-
-**NSL-KDD real benchmark — RF vs XGBoost:**
-
-| Metric | Random Forest | XGBoost |
+| Model | Seen attack types | Unseen attack types |
 |---|---|---|
-| Accuracy | 0.77 | 0.80 |
-| Attack Recall | 0.61 | 0.67 |
-| Macro F1 | 0.77 | 0.80 |
+| Random Forest | 0.768 | 0.293 |
+| XGBoost | 0.772 | 0.434 |
 
-XGBoost outperformed Random Forest across all metrics on real data. The performance drop compared to simulated data (95% → 80% accuracy) demonstrates the challenge of real-world network traffic classification, where attack patterns overlap with legitimate traffic.
+![Confusion matrices](results/confusion_matrices.png)
+![Precision-recall curves](results/pr_curves.png)
+![Random Forest feature importance](results/feature_importance_rf.png)
 
-The test set contains 56.9% attacks vs 46.5% in training — an intentional distribution shift simulating real deployment where attack patterns change over time. This explains the lower recall compared to balanced datasets.
+Observations:
+- XGBoost is the best model on every metric, mostly through better recall on unseen attacks.
+- Logistic regression is close on accuracy and recall; the tree models' main advantage is precision and PR-AUC.
+- The confusion matrices (first seed) show the same pattern: Random Forest raises 260 false alarms on 9,711 normal connections (2.7%) but misses 4,754 of 12,833 attacks; XGBoost raises 278 false alarms (2.9%) and misses 4,190.
+- Both tree models stay near 0.97 precision up to roughly 0.7 recall on the precision-recall curves, so the default decision threshold leaves recall on the table.
+- The Random Forest relies most on `src_bytes` and `dst_bytes`, followed by traffic-pattern features such as `dst_host_srv_count`, `same_srv_rate`, `diff_srv_rate` and `count`, and the connection flag `flag_SF`. Impurity-based importance favors continuous features with many distinct values, so treat the ranking as indicative; permutation importance would be a more reliable check.
 
-## Why This Matters
+## Limitations
 
-False negatives — real attacks classified as normal — are the most dangerous outcome in a security context. This project demonstrates both the capability and limitations of ML-based intrusion detection across simulated and real-world data, and highlights why recall is a more meaningful metric than accuracy alone in defence-critical systems.
+- NSL-KDD is derived from 1999-era traffic, so absolute numbers say little about modern networks. The value is in the comparison and the evaluation method.
+- Binary labels hide per-category weakness (for example rare R2L and U2R attacks).
+- No hyperparameter tuning or threshold tuning was done. Precision is high and recall is low, so lowering the decision threshold is the obvious next experiment. The threshold should be chosen on a validation split taken from the training data, not on KDDTest+.
+- 610 test rows also appear in the training data (about 2.7% of test).
 
-## How To Run
+## Why this matters
 
-**Simulated data:**
-1. `python generate_data.py` — generate dataset
-2. `python train_model.py` — train and evaluate
-3. `python visualise.py` — generate charts
-4. `python compare_models.py` — compare RF vs XGBoost
+In a security setting, a missed attack costs far more than a false alarm, so accuracy alone is misleading. The same trade-off applies to anomaly detection in a carrier network or an operations center: models need to flag novel behavior without overwhelming analysts, and this project shows where standard classifiers fall short.
 
-**Real NSL-KDD data:**
-1. Download `KDDTrain+.txt` and `KDDTest+.txt` from [Kaggle NSL-KDD](https://www.kaggle.com/datasets/hassan06/nslkdd)
-2. Place both files in the project folder
-3. `python nsl_kdd_model.py` — train and compare both models
+## Synthetic data (pipeline sanity check)
+
+`generate_data.py`, `train_model.py`, `visualise.py` and `compare_models.py` run the same pipeline on a small simulated dataset (1,000 normal + 200 attack connections, stratified 80/20 split). It confirms the pipeline works end to end (Random Forest: accuracy 0.95, attack recall 0.75, AP 0.95). Because the data is generated, these numbers and its feature importances reflect how the simulator was written and are not evidence about real traffic.
+
+## How to run
+
+```
+pip install numpy pandas scikit-learn xgboost matplotlib
+```
+
+NSL-KDD (place `KDDTrain+.txt` and `KDDTest+.txt` in the project folder):
+```
+python nsl_kdd_evaluation.py
+```
+Outputs are written to `results/`.
+
+Synthetic data:
+```
+python generate_data.py
+python train_model.py
+python visualise.py
+python compare_models.py
+```

@@ -1,0 +1,5 @@
+model,n_seeds,accuracy,attack_precision,attack_recall,attack_f1,macro_f1,pr_auc
+Majority baseline,1,0.431,0.000,0.000,0.000,0.301,0.569
+Logistic regression,1,0.754,0.918,0.625,0.743,0.754,0.866
+Random Forest,5,0.772 ± 0.007,0.968 ± 0.001,0.619 ± 0.013,0.755 ± 0.010,0.771 ± 0.008,0.961 ± 0.002
+XGBoost,5,0.802 ± 0.000,0.969 ± 0.000,0.673 ± 0.000,0.795 ± 0.000,0.802 ± 0.000,0.965 ± 0.000
